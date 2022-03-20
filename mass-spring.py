@@ -21,14 +21,14 @@ SPRING_REST_LENGTH = 0.75
 MASS_COUNT = SPRING_COUNT + 1
 
 FS = 10.0  # force spring
-FD = 0.0  # force damping
+FD = 0.05  # force damping
 MASS = 0.09
 AG = -9.81  # Gravitational force
 # 1 spring: KS = 3 and MASS = 0.075 (set KD=0) correspond to those
 # of the experiment in the lab and should result in a period T = +/- 1 sec
 
 mass_cubes = []  # tuple with (mass, pos, pos_prev, fh1, fh2)
-springs = []
+springs = []  # (length, length_prev)
 pos_x = 0
 
 
@@ -36,32 +36,56 @@ def left_click(event):
     global simulation_done
     simulation_done = True
 
-def apply_forces(i, dt):
-    mass, pos, pos_prev, fh1, fh2 = mass_cubes[i].values()
 
-    acc1 = 0
-    if i >= 1 :
+def change_cube_pos(i, newPos):
+    mass_cubes[i]["pos_prev"] = mass_cubes[i]["pos"]
+    mass_cubes[i]["pos"] = newPos
+
+
+def change_spring_length(i, newLength):
+    springs[i]["length_prev"] = springs[i]["length"]
+    springs[i]["length"] = newLength
+
+
+def calc_damping_v(dt, lenSpringNext):
+    lenSpringPrev = springs[0]["length_prev"]
+    y1 = lenSpringPrev - SPRING_REST_LENGTH
+    y2 = lenSpringNext - SPRING_REST_LENGTH
+    v = (y2 - y1) / (2*dt)
+    return v
+
+
+def apply_forces(i, dt):
+    mass, pos, pos_prev, fh1, fh2, fd1, fd2  = mass_cubes[i].values()
+
+    ah1 = 0
+    if i >= 1:
         lenSpringAbove = springs[i-1]["length"]
         mass_cubes[i]["fh1"] = FS*(lenSpringAbove - SPRING_REST_LENGTH)
-        acc1 = mass_cubes[i]["fh1"] / mass
-    acc2 = 0;
+        ah1 = mass_cubes[i]["fh1"] / mass
+    ah2 = 0
     if i < SPRING_COUNT:
         lenSpringUnder = springs[i]["length"]
         mass_cubes[i]["fh2"] = -FS*(lenSpringUnder - SPRING_REST_LENGTH)
-        acc2 = mass_cubes[i]["fh2"] / mass
+        ah2 = mass_cubes[i]["fh2"] / mass
+        
+    ad1 = fd1 / mass
+    ad2 = fd2 / mass
+    newPos = (2*pos - pos_prev + (ah1+ah2+ad1+ad2+AG) * dt**2)
 
-    newPos = (2*pos - pos_prev + (acc1+acc2+AG) * dt**2)
 
-    # v = ((pos - newPos) - pos_prev) / (2*dt)
-
-    # newPos = (2*pos - pos_prev + (acc1+acc2+AG) * dt**2)
-
-    mass_cubes[i]["pos_prev"] = pos
-    mass_cubes[i]["pos"] = newPos
-    if i >= 1 :
-        springs[i-1]["length"] += pos - newPos
+    change_cube_pos(i, newPos)
+    if i >= 1:
+        newLength = springs[i-1]["length"] + (pos - newPos)
+        v = calc_damping_v(dt, newLength)
+        mass_cubes[i]["fd1"] = FD*v
+        change_spring_length(i-1, newLength)
     if i < SPRING_COUNT:
-        springs[i]["length"] -= pos - newPos
+        newLength = springs[i]["length"] - (pos - newPos)
+        v = calc_damping_v(dt, newLength)
+        mass_cubes[i]["fd2"] = -FD*v
+        change_spring_length(i, newLength)
+
 
 def do_simulation(dt):
     for i, dict in enumerate(mass_cubes[1:]):
@@ -89,9 +113,9 @@ def init_scene():
     for i in range(0, MASS_COUNT):
         length = SPRING_REST_LENGTH + (random.random() - 0.5)
         mass_cube = {"mass": MASS, "pos": CEILING - totalLength,
-                     "pos_prev": CEILING - totalLength, "fh1": 0, "fh2": 0}
+                     "pos_prev": CEILING - totalLength, "fh1": 0, "fh2": 0, "fd1": 0, "fd2": 0}
         mass_cubes.append(mass_cube)
-        spring = {"length": length}
+        spring = {"length": length, "length_prev": length}
         springs.append(spring)
         totalLength += length
     springs.pop()
