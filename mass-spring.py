@@ -17,11 +17,11 @@ FLOOR = w_ymin + 0.5
 
 # variables
 SPRING_COUNT = 10
-SPRING_REST_LENGTH = 0.75
+SPRING_REST_LENGTH = 0.9
 MASS_COUNT = SPRING_COUNT + 1
 
 FS = 10.0  # force spring
-FD = 0.05  # force damping
+FD = 0.5  # force damping
 MASS = 0.09
 AG = -9.81  # Gravitational force
 # 1 spring: KS = 3 and MASS = 0.075 (set KD=0) correspond to those
@@ -47,8 +47,8 @@ def change_spring_length(i, newLength):
     springs[i]["length"] = newLength
 
 
-def calc_damping_v(dt, lenSpringNext):
-    lenSpringPrev = springs[0]["length_prev"]
+def calc_damping_v(dt, lenSpringNext, i):
+    lenSpringPrev = springs[i]["length_prev"]
     y1 = lenSpringPrev - SPRING_REST_LENGTH
     y2 = lenSpringNext - SPRING_REST_LENGTH
     v = (y2 - y1) / (2*dt)
@@ -68,7 +68,7 @@ def apply_forces(i, dt):
         lenSpringUnder = springs[i]["length"]
         mass_cubes[i]["fh2"] = -FS*(lenSpringUnder - SPRING_REST_LENGTH)
         ah2 = mass_cubes[i]["fh2"] / mass
-        
+
     ad1 = fd1 / mass
     ad2 = fd2 / mass
     newPos = (2*pos - pos_prev + (ah1+ah2+ad1+ad2+AG) * dt**2)
@@ -77,19 +77,19 @@ def apply_forces(i, dt):
     change_cube_pos(i, newPos)
     if i >= 1:
         newLength = springs[i-1]["length"] + (pos - newPos)
-        v = calc_damping_v(dt, newLength)
+        v = calc_damping_v(dt, newLength, i - 1)
         mass_cubes[i]["fd1"] = FD*v
         change_spring_length(i-1, newLength)
     if i < SPRING_COUNT:
         newLength = springs[i]["length"] - (pos - newPos)
-        v = calc_damping_v(dt, newLength)
+        v = calc_damping_v(dt, newLength, i)
         mass_cubes[i]["fd2"] = -FD*v
         change_spring_length(i, newLength)
 
 
 def do_simulation(dt):
-    for i, dict in enumerate(mass_cubes[1:]):
-        apply_forces(i+1, dt)
+    for i in range(1, len(mass_cubes)):
+        apply_forces(i, dt)
 
 
 def draw_scene():
