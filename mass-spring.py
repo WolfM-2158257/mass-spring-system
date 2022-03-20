@@ -38,7 +38,7 @@ def left_click(event):
 
 def apply_forces(i, dt):
     mass, pos, pos_prev, fh1, fh2 = mass_cubes[i].values()
-    lenSpring = springs[i-2]["length"]
+    lenSpring = springs[i-1]["length"]
     mass_cubes[i]["fh1"] = FS*(lenSpring-SPRING_REST_LENGTH)
     acc = mass_cubes[i]["fh1"] / mass
     newPos = (2*pos-pos_prev+(acc+FG)*dt**2)
