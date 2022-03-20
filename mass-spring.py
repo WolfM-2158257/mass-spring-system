@@ -37,14 +37,26 @@ def left_click(event):
     simulation_done = True
 
 def apply_forces(i, dt):
+    acc2 = 0
+
     mass, pos, pos_prev, fh1, fh2 = mass_cubes[i].values()
-    lenSpring = springs[i-2]["length"]
-    mass_cubes[i]["fh1"] = FS*(lenSpring-SPRING_REST_LENGTH)
+    lenSpringAbove = springs[i-1]["length"]
+
+    if i < SPRING_COUNT:
+        posMassUnder = mass_cubes[i+1]["pos"]
+        mass_cubes[i]["fh2"] = FS*posMassUnder - pos*FS
+        acc2 = mass_cubes[i]["fh2"] / mass
+        # print("acc2:", acc2)
+
+    mass_cubes[i]["fh1"] = FS*(lenSpringAbove - SPRING_REST_LENGTH)
     acc = mass_cubes[i]["fh1"] / mass
-    newPos = (2*pos-pos_prev+(acc+FG)*dt**2)
+    # print('acc:',acc)
+
+    newPos = (2*pos - pos_prev + (acc+acc2+FG) * dt**2)
+
     mass_cubes[i]["pos_prev"] = pos
     mass_cubes[i]["pos"] = newPos
-    springs[i-1]["length"] += pos-newPos
+    springs[i-1]["length"] += pos - newPos
 
 def do_simulation(dt):
     for i, dict in enumerate(mass_cubes[1:]):
