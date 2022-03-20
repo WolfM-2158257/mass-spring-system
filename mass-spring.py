@@ -20,10 +20,10 @@ SPRING_COUNT = 10
 SPRING_REST_LENGTH = 0.75
 MASS_COUNT = SPRING_COUNT + 1
 
-FS = 1.0  # force spring
+FS = 10.0  # force spring
 FD = 0.0  # force damping
 MASS = 0.09
-FG = -9.81  # Gravitational force
+AG = -9.81  # Gravitational force
 # 1 spring: KS = 3 and MASS = 0.075 (set KD=0) correspond to those
 # of the experiment in the lab and should result in a period T = +/- 1 sec
 
@@ -37,26 +37,31 @@ def left_click(event):
     simulation_done = True
 
 def apply_forces(i, dt):
-    acc2 = 0
-
     mass, pos, pos_prev, fh1, fh2 = mass_cubes[i].values()
-    lenSpringAbove = springs[i-1]["length"]
 
+    acc1 = 0
+    if i >= 1 :
+        lenSpringAbove = springs[i-1]["length"]
+        mass_cubes[i]["fh1"] = FS*(lenSpringAbove - SPRING_REST_LENGTH)
+        acc1 = mass_cubes[i]["fh1"] / mass
+    acc2 = 0;
     if i < SPRING_COUNT:
-        posMassUnder = mass_cubes[i+1]["pos"]
-        mass_cubes[i]["fh2"] = FS*posMassUnder - pos*FS
+        lenSpringUnder = springs[i]["length"]
+        mass_cubes[i]["fh2"] = -FS*(lenSpringUnder - SPRING_REST_LENGTH)
         acc2 = mass_cubes[i]["fh2"] / mass
-        # print("acc2:", acc2)
 
-    mass_cubes[i]["fh1"] = FS*(lenSpringAbove - SPRING_REST_LENGTH)
-    acc = mass_cubes[i]["fh1"] / mass
-    # print('acc:',acc)
+    newPos = (2*pos - pos_prev + (acc1+acc2+AG) * dt**2)
 
-    newPos = (2*pos - pos_prev + (acc+acc2+FG) * dt**2)
+    # v = ((pos - newPos) - pos_prev) / (2*dt)
+
+    # newPos = (2*pos - pos_prev + (acc1+acc2+AG) * dt**2)
 
     mass_cubes[i]["pos_prev"] = pos
     mass_cubes[i]["pos"] = newPos
-    springs[i-1]["length"] += pos - newPos
+    if i >= 1 :
+        springs[i-1]["length"] += pos - newPos
+    if i < SPRING_COUNT:
+        springs[i]["length"] -= pos - newPos
 
 def do_simulation(dt):
     for i, dict in enumerate(mass_cubes[1:]):
