@@ -10,7 +10,7 @@ w_xmin, w_ymin, w_xmax = -10, 0, 10
 w_ymax = w_ymin + (w_xmax - w_xmin)/vp_width * vp_height
 
 simulation_done = False
-DELTA_TSIM = 0.0005
+DELTA_TSIM = 0.0001
 DELTA_TDRAW = 0.02  # 50 fps
 
 CEILING = w_ymax - 0.5
@@ -22,9 +22,9 @@ SPRING_REST_LENGTH = 0.9
 MASS_COUNT = SPRING_COUNT + 1
 
 FS = 10.0  # force spring
-FD = 0.5  # force damping
+FD = 0.05  # force damping
 MASS = 0.09
-AG = -9.81  # Gravitational force
+AG = -9.81  # Gravitational acceleration
 # 1 spring: KS = 3 and MASS = 0.075 (set KD=0) correspond to those
 # of the experiment in the lab and should result in a period T = +/- 1 sec
 
@@ -65,16 +65,19 @@ def apply_forces(i, dt):
     if i >= 1:
         lenSpringAbove = old_springs[i-1]["length"]
         new_mass_cubes[i]["fh1"] = FS*(lenSpringAbove - SPRING_REST_LENGTH)
-        ah1 = old_mass_cubes[i]["fh1"] / mass
+        ah1 = new_mass_cubes[i]["fh1"] / mass
     ah2 = 0
     if i < SPRING_COUNT:
         lenSpringUnder = old_springs[i]["length"]
         new_mass_cubes[i]["fh2"] = -FS*(lenSpringUnder - SPRING_REST_LENGTH)
-        ah2 = old_mass_cubes[i]["fh2"] / mass
+        ah2 = new_mass_cubes[i]["fh2"] / mass
 
     ad1 = fd1 / mass
     ad2 = fd2 / mass
-    newPos = (2*pos - pos_prev + (ah1+ah2+ad1+ad2+AG) * dt**2)
+    scalar = 1
+    if i < SPRING_COUNT:
+        scalar = 2
+    newPos = (2*pos - pos_prev + ((ah1+ah2+ad1+ad2)/scalar+AG) * dt**2)
 
 
     change_cube_pos(i, newPos)
@@ -96,14 +99,15 @@ def do_simulation(dt):
 
 
 def draw_scene():
-    global new_mass_cubes
-    global new_springs
+    global old_mass_cubes
+    global old_springs
     # draw_grid (canvas)
     RED = rgb_col(255, 0, 0)
     GREEN = rgb_col(0, 255, 0)
     YELLOW = rgb_col(255, 255, 0)
     draw_line(canvas, w_xmin, FLOOR, w_xmax, FLOOR, RED)
     draw_line(canvas, w_xmin/2, CEILING, w_xmax/2, CEILING, GREEN)
+    
     for i in range(0, SPRING_COUNT):
         pos_y = new_mass_cubes[i]["pos"]
         length = new_springs[i]["length"]
@@ -111,8 +115,9 @@ def draw_scene():
     for i in range(0, MASS_COUNT):
         pos_y = new_mass_cubes[i]["pos"]
         draw_dot(canvas, pos_x, pos_y, YELLOW)
-    new_springs = copy.copy(old_springs)
-    new_mass_cubes = copy.copy(old_mass_cubes)
+        
+    old_springs = copy.copy(new_springs)
+    old_mass_cubes = copy.copy(new_mass_cubes)
 
 
 
