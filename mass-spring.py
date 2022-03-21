@@ -22,7 +22,7 @@ SPRING_REST_LENGTH = 0.9
 MASS_COUNT = SPRING_COUNT + 1
 
 FS = 10.0  # force spring
-FD = 0.05  # force damping
+FD = 0.5  # force damping
 MASS = 0.09
 AG = -9.81  # Gravitational acceleration
 # 1 spring: KS = 3 and MASS = 0.075 (set KD=0) correspond to those
@@ -74,10 +74,7 @@ def apply_forces(i, dt):
 
     ad1 = fd1 / mass
     ad2 = fd2 / mass
-    scalar = 1
-    if i < SPRING_COUNT:
-        scalar = 2
-    newPos = (2*pos - pos_prev + ((ah1+ah2+ad1+ad2)/scalar+AG) * dt**2)
+    newPos = (2*pos - pos_prev + (ah1+ah2+ad1+ad2+AG) * dt**2)
 
 
     change_cube_pos(i, newPos)
